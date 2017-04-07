@@ -1,0 +1,6 @@
+c:\temp\sql\tvp_ex\tvp_ex\bin\Debug\tvp_ex.exe.config
+c:\temp\sql\tvp_ex\tvp_ex\bin\Debug\tvp_ex.exe
+c:\temp\sql\tvp_ex\tvp_ex\bin\Debug\tvp_ex.pdb
+c:\temp\sql\tvp_ex\tvp_ex\obj\Debug\tvp_ex.exe
+c:\temp\sql\tvp_ex\tvp_ex\obj\Debug\tvp_ex.pdb
+c:\temp\sql\tvp_ex\tvp_ex\obj\Debug\tvp_ex.csprojResolveAssemblyReference.cache

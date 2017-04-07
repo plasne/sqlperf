@@ -1,0 +1,5 @@
+SELECT * FROM colors WHERE (@range)
+SELECT id, color, @P1, @P2, @P3 FROM colors
+@P1,NVARCHAR,testing
+@P2,INT,14
+@P1,DATETIME2,2017-03-29 11:22:44.2390000
