@@ -95,14 +95,15 @@ public class JavaSql {
         break;
 
       case "temp-insert":
-        List<string> pres = new List<string>();
-        pres.Add("CREATE TABLE #in_temp (original nvarchar(50), modified as UPPER(original) COLLATE Latin1_General_BIN2);");
+        ArrayList<String> pres = new ArrayList<String>();
+        pres.add("SET NOCOUNT ON;");
+        pres.add("CREATE TABLE #in_temp (original nvarchar(50), modified as UPPER(original) COLLATE Latin1_General_BIN2);");
         for (Iterator<Parameter> i = full_parameters.iterator(); i.hasNext();) {
           Parameter parameter = i.next();
-          pres.Add("INSERT INTO #in_temp (original) VALUES ('" + parameter.value + "');"));
+          pres.add("INSERT INTO #in_temp (original) VALUES ('" + parameter.value + "');");
         }
-        pre_query = string.Join(" ", pres.toArray(new String[0]));
-        query = template1.Replace("@range", "UPPER(cgbpsecacc4_.COL_0) IN (SELECT modified FROM #in_temp)");
+        String prepare = String.join(" ", pres.toArray(new String[0])) + " ";
+        query = prepare + template1.replace("@range", "UPPER(cgbpsecacc4_.COL_0) IN (SELECT modified FROM #in_temp)");
         break;
 
     }
@@ -137,7 +138,7 @@ public class JavaSql {
           // run the pre-query
           if (pre_query != null && !pre_query.trim().isEmpty()) {
             pre_command = connection.prepareStatement(pre_query);
-            pre_command.executeNonQuery();
+            pre_command.execute();
           }
 
           // replace parameters with ?
@@ -173,14 +174,17 @@ public class JavaSql {
           }
 
           // execute the query and show the results
-          rs = command.executeQuery();
-          ResultSetMetaData metadata = rs.getMetaData();
-          while (rs.next()) {
-            ArrayList<String> columns = new ArrayList<String>();
-            for (int i = 0; i < metadata.getColumnCount(); i++) {
-              columns.add(rs.getString(i + 1));
+          boolean hasResultSet = command.execute();
+          if (hasResultSet) {
+            rs = command.getResultSet();
+            ResultSetMetaData metadata = rs.getMetaData();
+            while (rs.next()) {
+              ArrayList<String> columns = new ArrayList<String>();
+              for (int i = 0; i < metadata.getColumnCount(); i++) {
+                columns.add(rs.getString(i + 1));
+              }
+              System.out.println( String.join(", ", columns.toArray(new String[0])) );
             }
-            System.out.println( String.join(", ", columns.toArray(new String[0])) );
           }
 
           // write out elapsed time
