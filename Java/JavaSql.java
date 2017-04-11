@@ -1,5 +1,6 @@
 package custom;
 
+// includes
 import java.io.*;
 import java.nio.charset.Charset;
 import java.sql.*;
@@ -8,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.text.SimpleDateFormat;
 
+// parameter class
 class Parameter {
   public String key;
   public String type;
@@ -21,8 +23,10 @@ class Parameter {
 
 }
 
+// JavaSql class
 public class JavaSql {
 
+  // find Parameter in parameters by key
   private static Parameter find(ArrayList<Parameter> parameters, String key) {
     for (Iterator<Parameter> i = parameters.iterator(); i.hasNext();) {
       Parameter parameter = i.next();
@@ -31,13 +35,16 @@ public class JavaSql {
     return null;
   }
 
+  // console method
   public static void main(String args[]) {
 
+    // invalid cmdline parameters
     if (args.length < 1) {
       System.out.println("javasql.exe [path] [server] [database] [username] [password] [scenario] [action]");
       System.exit(-1);
     }
 
+    // cmdline parameters
     String path = (args.length > 0) ? args[0] : "settings.txt";
     String server = (args.length > 1) ? args[1] : "pelasne-sqlsvr.database.windows.net";
     String database = (args.length > 2) ? args[2] : "pelasne-sql";
@@ -46,6 +53,7 @@ public class JavaSql {
     String scenario = (args.length > 5) ? args[5] : "original";
     String action =  (args.length > 6) ? args[6] : "show";
 
+    // read the settings file
     String template1 = null;
     String template2 = null;
     ArrayList<Parameter> full_parameters = new ArrayList<Parameter>();
@@ -64,12 +72,7 @@ public class JavaSql {
       e.printStackTrace();
     }
 
-    ArrayList<String> parameters = new ArrayList<String>();
-    for (Iterator<Parameter> i = full_parameters.iterator(); i.hasNext();) {
-      Parameter parameter = i.next();
-      parameters.add(parameter.value);
-    }
-
+    // define pre_query and query based on scenario
     String pre_query = null;
     String query = null;
     switch(scenario) {
@@ -91,8 +94,20 @@ public class JavaSql {
         query = template2.replace("@range", String.join(" OR ", uppers_param.toArray(new String[0])));
         break;
 
+      case "temp-insert":
+        List<string> pres = new List<string>();
+        pres.Add("CREATE TABLE #in_temp (original nvarchar(50), modified as UPPER(original) COLLATE Latin1_General_BIN2);");
+        for (Iterator<Parameter> i = full_parameters.iterator(); i.hasNext();) {
+          Parameter parameter = i.next();
+          pres.Add("INSERT INTO #in_temp (original) VALUES ('" + parameter.value + "');"));
+        }
+        pre_query = string.Join(" ", pres.toArray(new String[0]));
+        query = template1.Replace("@range", "UPPER(cgbpsecacc4_.COL_0) IN (SELECT modified FROM #in_temp)");
+        break;
+
     }
 
+    // process
     switch(action) {
 
       case "show":
@@ -107,27 +122,36 @@ public class JavaSql {
 
       case "run":
         Connection connection = null;
+        PreparedStatement pre_command = null;
         PreparedStatement command = null;
         ResultSet rs = null;
 
         try {
 
+          // open the connection
           Date start = new Date();
-
           String connectionString = "jdbc:sqlserver://" + server + ":1433;database=" + database + ";user=" + username + ";password=" + password + ";encrypt=true;trustServerCertificate=true;loginTimeout=30;";
           Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
           connection = DriverManager.getConnection(connectionString);
 
-          Boolean use_parameters = (scenario == "original-param");
+          // run the pre-query
+          if (pre_query != null && !pre_query.trim().isEmpty()) {
+            pre_command = connection.prepareStatement(pre_query);
+            pre_command.executeNonQuery();
+          }
 
+          // replace parameters with ?
+          Boolean use_parameters = (scenario == "original-param");
           if (use_parameters) {
             for (int i = 0; i < full_parameters.size(); i++) {
               query = query.replace("@P" + i, "?");
             }
           }
 
+          // prepare the statement
           command = connection.prepareStatement(query);
 
+          // complete the parameters
           if (use_parameters) {
             for (int i = 0; i < full_parameters.size(); i++) {
               Parameter parameter = find(full_parameters, "@P" + i);
@@ -148,6 +172,7 @@ public class JavaSql {
             }
           }
 
+          // execute the query and show the results
           rs = command.executeQuery();
           ResultSetMetaData metadata = rs.getMetaData();
           while (rs.next()) {
@@ -158,6 +183,7 @@ public class JavaSql {
             System.out.println( String.join(", ", columns.toArray(new String[0])) );
           }
 
+          // write out elapsed time
           Date end = new Date();
           System.out.println((end.getTime() - start.getTime()) + " ms elapsed.");
 
@@ -166,6 +192,7 @@ public class JavaSql {
         } finally {
           if (rs != null) try { rs.close(); } catch(Exception e) { };
           if (command != null) try { command.close(); } catch(Exception e) { };
+          if (pre_command != null) try { pre_command.close(); } catch(Exception e) { };
           if (connection != null) try { connection.close(); } catch(Exception e) { };
         }
         break;
